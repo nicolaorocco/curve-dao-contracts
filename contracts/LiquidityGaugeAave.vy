@@ -1,6 +1,6 @@
 # @version 0.2.4
 """
-@title Liquidity Gauge
+@title Lending Liquidity Gauge
 @author Curve Finance
 @license MIT
 @notice Used for measuring liquidity and insurance
@@ -35,6 +35,10 @@ interface VotingEscrow:
 event Deposit:
     provider: indexed(address)
     value: uint256
+
+event CreateWallet:
+    owner: indexed(address)
+    wallet: address
 
 event Withdraw:
     provider: indexed(address)
@@ -91,11 +95,13 @@ inflation_rate: public(uint256)
 
 
 @external
-def __init__(lp_addr: address, _minter: address, _atoken: address):
+def __init__(lp_addr: address, _minter: address, _atoken: address, _wallet_library: address):
     """
     @notice Contract constructor
     @param lp_addr Liquidity Pool contract address
     @param _minter Minter contract address
+    @param _atoken Address of Aave derivative token representing `lp_token`
+    @param _wallet_library Address of `LiquidityGaugeWallet` to be used as a library
     """
 
     assert lp_addr != ZERO_ADDRESS
@@ -104,6 +110,7 @@ def __init__(lp_addr: address, _minter: address, _atoken: address):
     self.lp_token = lp_addr
     self.minter = _minter
     self.atoken = _atoken
+    self.wallet_library = _wallet_library
     crv_addr: address = Minter(_minter).token()
     self.crv_token = crv_addr
     controller_addr: address = Minter(_minter).controller()
@@ -269,6 +276,9 @@ def set_approve_deposit(addr: address, can_deposit: bool):
 def deposit(_value: uint256, addr: address = msg.sender):
     """
     @notice Deposit `_value` LP tokens
+    @dev The first deposit for each address deploys a new `LiquidityGaugeWallet`
+         using a factory pattern. This contracts holds all deposits for the address
+         and is used to lend and borrow on Aave.
     @param _value Number of tokens to deposit
     @param addr Address to deposit for
     """
@@ -279,10 +289,12 @@ def deposit(_value: uint256, addr: address = msg.sender):
 
     _wallet: address = self.walletOf[addr]
     if _wallet == ZERO_ADDRESS:
+        # if this is the first deposit from `addr`, deploy a new wallet contract
         _wallet = create_forwarder_to(self.wallet_library)
         LiquidityGaugeWallet(_wallet).initialize(addr, self.lp_token, self.atoken)
 
         self.walletOf[addr] = _wallet
+        log CreateWallet(addr, _wallet)
 
     if _value != 0:
         _balance: uint256 = self.balanceOf[addr] + _value
@@ -304,6 +316,7 @@ def deposit(_value: uint256, addr: address = msg.sender):
 def withdraw(_value: uint256):
     """
     @notice Withdraw `_value` LP tokens
+    @dev Set `_value` as `MAX_UINT256` to withdraw the full balance
     @param _value Number of tokens to withdraw
     """
     self._checkpoint(msg.sender)
@@ -316,6 +329,8 @@ def withdraw(_value: uint256):
 
         self._update_liquidity_limit(msg.sender, _balance, _supply)
 
+        # if the call requests to withdraw the full balance, use `MAX_UINT256`
+        # to ensure we also withdraw any accumulated interest
         _withdraw_value: uint256 = MAX_UINT256
         if _balance != 0:
             _withdraw_value = _value
@@ -327,6 +342,15 @@ def withdraw(_value: uint256):
 
 @external
 def liquidate(_target: address, _liquidator: address) -> bool:
+    """
+    @notice Adjust the balance of staked `lp_token` within the gauge
+            based on a liquidation event
+    @dev This method is not called directly, it must be called via
+         `LiquidityGaugeWallet.liquidate` on the liquidatable wallet
+    @param _target Owner address being liquidated
+    @param _liquidator Caller address that initiated the liquidation
+    @return Success boolean
+    """
     assert self.walletOf[_target] == msg.sender
 
     self._checkpoint(_target)
