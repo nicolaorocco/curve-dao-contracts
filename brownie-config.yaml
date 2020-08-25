@@ -2,10 +2,21 @@ reports:
   exclude_paths:
     - contracts/testing/*.*
 
+compiler:
+    solc:
+        version: null
+        optimizer:
+            enabled: false
+            runs: 200
+
 networks:
     development:
       cmd_settings:
         accounts: 100
     mainnet-fork:
       cmd_settings:
-        unlock: 0xC447FcAF1dEf19A583F97b3620627BF69c05b5fB
+        unlock:
+          - 0xC447FcAF1dEf19A583F97b3620627BF69c05b5fB  # Original pool owner
+          - 0x40907540d8a6C65c637785e8f8B742ae6b0b9968  # Aragon DAO Agent
+          - 0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE  # Binance
+          - 0x2D407dDb06311396fE14D4b49da5F0471447d45C  # CurveYCRVVoter owner
