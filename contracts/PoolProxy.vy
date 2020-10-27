@@ -28,8 +28,12 @@ interface Curve:
     def donate_admin_fees(): nonpayable
 
 
+interface AddressProvider:
+    def get_registry() -> address: view
+
 interface Registry:
-    def get_pool_info(_pool: address) -> PoolInfo: view
+    def get_decimals(_pool: address) -> uint256[8]: view
+    def get_underlying_balances(_pool: address) -> uint256[8]: view
 
 
 MAX_COINS: constant(int128) = 8
@@ -69,15 +73,20 @@ min_asymmetries: public(HashMap[address, uint256])
 
 burners: public(HashMap[address, address])
 
-registry: Registry
+address_provider: AddressProvider
 
 
 @external
-def __init__(_registry: address, _ownership_admin: address, _parameter_admin: address, _emergency_admin: address):
+def __init__(
+    _address_provider: address,
+    _ownership_admin: address,
+    _parameter_admin: address,
+    _emergency_admin: address
+):
     self.ownership_admin = _ownership_admin
     self.parameter_admin = _parameter_admin
     self.emergency_admin = _emergency_admin
-    self.registry = Registry(_registry)
+    self.address_provider = AddressProvider(_address_provider)
 
 
 @external
@@ -289,18 +298,21 @@ def apply_new_parameters(_pool: address):
     min_asymmetry: uint256 = self.min_asymmetries[_pool]
 
     if min_asymmetry > 0:
-        pool_info: PoolInfo = self.registry.get_pool_info(_pool)
+        registry: address = self.address_provider.get_registry()
+        underlying_balances: uint256[8] = Registry(registry).get_underlying_balances(_pool)
+        decimals: uint256[8] = Registry(registry).get_decimals(_pool)
+
         balances: uint256[MAX_COINS] = empty(uint256[MAX_COINS])
         # asymmetry = prod(x_i) / (sum(x_i) / N) ** N =
         # = prod( (N * x_i) / sum(x_j) )
         S: uint256 = 0
         N: uint256 = 0
         for i in range(MAX_COINS):
-            x: uint256 = pool_info.underlying_balances[i]
+            x: uint256 = underlying_balances[i]
             if x == 0:
-                N = convert(i, uint256)
+                N = i
                 break
-            x *= 10 ** (18 - pool_info.decimals[i])
+            x *= 10 ** (18 - decimals[i])
             balances[i] = x
             S += x
 
