@@ -1,11 +1,13 @@
 import pytest
 
 
-YEAR = 365 * 86400
-INITIAL_RATE = 274_815_283
+YEAR = 30 * 86400
+INITIAL_RATE = 100_000
 YEAR_1_SUPPLY = INITIAL_RATE * 10 ** 18 // YEAR * YEAR
-INITIAL_SUPPLY = 1_303_030_303
+INITIAL_SUPPLY = 0
 
+FOUNDERS = "0xC2b816C8d608D640CF7673669E1f6F7474CA5928"
+TREASURY = "0xC2b816C8d608D640CF7673669E1f6F7474CA5928"
 
 def approx(a, b, precision=1e-10):
     if a == b == 0:
@@ -59,7 +61,7 @@ def gauge_controller(GaugeController, accounts, token, voting_escrow):
 
 @pytest.fixture(scope="module")
 def minter(Minter, accounts, gauge_controller, token):
-    yield Minter.deploy(token, gauge_controller, {'from': accounts[0]})
+    yield Minter.deploy(token, gauge_controller, TREASURY, FOUNDERS, {'from': accounts[0]})
 
 
 @pytest.fixture(scope="module")

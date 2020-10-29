@@ -11,7 +11,7 @@ def live():
 
     transfer_ownership(
         admin,
-        config.ARAGON_AGENT,
+        config.ADMIN_MULTISIG,
         deployments['GaugeController'],
         deployments['VotingEscrow'],
         deployments['PoolProxy'],
@@ -28,7 +28,7 @@ def development():
 
     transfer_ownership(
         admin,
-        config.ARAGON_AGENT,
+        config.ADMIN_MULTISIG,
         deployments['GaugeController'],
         deployments['VotingEscrow'],
         deployments['PoolProxy'],
@@ -39,7 +39,7 @@ def development():
 def transfer_ownership(admin, new_admin, gauge_controller, voting_escrow, pool_proxy, erc20crv, confs=1):
     gauge_controller = GaugeController.at(gauge_controller)
     voting_escrow = VotingEscrow.at(voting_escrow)
-    pool_proxy = PoolProxy.at(pool_proxy)
+    # pool_proxy = PoolProxy.at(pool_proxy)
     erc20crv = ERC20CRV.at(erc20crv)
 
     gauge_controller.commit_transfer_ownership(new_admin, {'from': admin, 'required_confs': confs})
@@ -48,9 +48,9 @@ def transfer_ownership(admin, new_admin, gauge_controller, voting_escrow, pool_p
     voting_escrow.commit_transfer_ownership(new_admin, {'from': admin, 'required_confs': confs})
     voting_escrow.apply_transfer_ownership({'from': admin, 'required_confs': confs})
 
-    pool_proxy.commit_set_admins(
-        new_admin, new_admin, new_admin, {'from': admin, 'required_confs': confs}
-    )
-    pool_proxy.apply_set_admins({'from': admin, 'required_confs': confs})
+    # pool_proxy.commit_set_admins(
+    #     new_admin, new_admin, new_admin, {'from': admin, 'required_confs': confs}
+    # )
+    # pool_proxy.apply_set_admins({'from': admin, 'required_confs': confs})
 
     erc20crv.set_admin(new_admin, {'from': admin, 'required_confs': confs})
