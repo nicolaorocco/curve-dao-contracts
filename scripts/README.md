@@ -50,27 +50,13 @@ Deployment scripts for the Curve DAO.
 
     This deploys and links all of the core Curve DAO contracts. A JSON is generated containing the address of each deployed contract. **DO NOT MOVE OR DELETE THIS FILE**. It is required in later deployment stages.
 
-### 3. Deploying the Aragon DAO
+### 3. Deploying the Gnosis Multisig
 
-1. If you haven't already, install the [Aragon CLI](https://github.com/aragon/aragon-cli):
+Gnosis Safe: [Website](https://gnosis-safe.io/)
 
-    ```bash
-    npm install --global @aragon/cli
-    ```
+### 4. Transferring Ownership of Curve DAO to Multisig
 
-Aragon: [Custom Deploy](https://hack.aragon.org/docs/guides-custom-deploy)
-
-# Deploy the [Curve Aragon Voting App](https://github.com/curvefi/curve-aragon-voting/blob/master/README.md)
-
-# Deploy Aragon DAO 
-    
-Read instructions in [Deploy Aragon DAO README](./Deploy_Aragon_DAO_README.md) 
-
-Once the DAO is successfully deployed, modify [`deployment_config`](deployment_config.py) so that `ARAGON_AGENT` points to the [Aragon Ownership Agent](https://github.com/aragon/aragon-apps/blob/master/apps/agent/contracts/Agent.sol) deployment.
-
-Deploy subgraphs for Curve Voting App and VotingEscrow
-
-### 4. Transferring Ownership of Curve DAO to Aragon
+Once the DAO is successfully deployed, modify [`deployment_config`](deployment_config.py) so that `ADMIN_MULTISIG` points to the multisig deployment.
 
 1. Verify [`transfer_dao_ownership`](transfer_dao_ownership) by testing it on a forked mainnet:
 
@@ -125,38 +111,3 @@ Vesting distribution is split between historic liquidity providers and other acc
     brownie run vest_other_tokens live --network mainnet
     ```
 6. Transfer reserve vesting escrow admin to Aragon Ownership Agent
-
-### 6. Transferring Ownership of Curve Pools to Aragon
-
-Transferring ownership of pools requires a three day delay between the first call and the second. Calls must be made from the [pool owner](https://etherscan.io/address/0xc447fcaf1def19a583f97b3620627bf69c05b5fb) address.
-
-1. Verify [`transfer_pool_ownership`](transfer_pool_ownership.py) by testing it against a forked mainnet:
-
-    Ganache allows us to broadcast from the pool owner without unlocking the account - no setup is required here.
-
-    ```bash
-    brownie run transfer_pool_ownership development --network mainnet-fork
-    ```
-
-    This test verifies both the initial commit and the final transfer.
-
-2. Run the [`transfer_pool_ownership`](transfer_pool_ownership.py) script to initiate the ownership transfer:
-
-    Before running this script, make sure the pool owner account has been unlocked.
-
-    ```bash
-    brownie run transfer_pool_ownership live --network mainnet
-    ```
-
-2. Three days later, run [`transfer_pool_ownership`](transfer_pool_ownership.py) again to apply the transfer:
-
-    ```bash
-    brownie run transfer_pool_ownership live --network mainnet
-    ```
-
-
-Subgraph setup for UI
-
-Deploy [connect-thegraph-voting](https://github.com/curvefi/connect-thegraph-voting)
-
-Deploy [votingescrow-subgraph](https://github.com/curvefi/votingescrow-subgraph)
